@@ -1,0 +1,21 @@
+services:
+  camoufox-api:
+    build: .
+    #network_mode: "host"
+    restart: always
+    ports:
+      - "8031:8031"
+    environment:
+      - CAMOUFOX_HEADLESS=virtual
+      - CAMOUFOX_OS=windows
+      - CAMOUFOX_LOCALE=en-US
+      - CAMOUFOX_HUMANIZE=true
+      - CAMOUFOX_GEOIP=false
+      - CAMOUFOX_PERSISTENT=true
+      - CAMOUFOX_USER_DATA_DIR=/app/camoufox-profile
+
+    volumes:
+      - camoufox-profile:/app/camoufox-profile
+
+volumes:
+  camoufox-profile:

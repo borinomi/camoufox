@@ -1,0 +1,5 @@
+fastapi
+uvicorn
+pydantic
+camoufox[geoip]
+playwright==1.59.0
