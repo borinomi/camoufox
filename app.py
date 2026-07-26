@@ -64,6 +64,9 @@ class InjectCookieRequest(BaseModel):
     path: str = "/"
     secure: bool = True
 
+class ClearCookieRequest(BaseModel):
+    domain: str | None = None  
+
 def now_iso():
     return datetime.now().isoformat()
 
@@ -363,6 +366,53 @@ async def inject_cookie(request: InjectCookieRequest):
                 "domain": request.domain,
                 "timestamp": now_iso(),
             }
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        return {"success": False, "error": str(e), "timestamp": now_iso()}
+
+@app.post("/clear_cookies")
+async def clear_cookies(request: ClearCookieRequest):
+    try:
+        async with app.state.lock:
+            page = await ensure_page()
+            ctx = page.context
+
+            if request.domain:
+                # 지정 도메인 및 서브도메인 형태 모두 시도
+                targets = {
+                    request.domain,
+                    "." + request.domain.lstrip("."),
+                    "www." + request.domain.lstrip("."),
+                }
+                for d in targets:
+                    try:
+                        await ctx.clear_cookies(domain=d)
+                    except TypeError:
+                        # 구버전 Playwright: domain 필터 미지원 → 아래 fallback으로
+                        raise
+                mode = f"domain={request.domain}"
+            else:
+                await ctx.clear_cookies()
+                mode = "all"
+
+            return {"success": True, "mode": mode, "timestamp": now_iso()}
+    except TypeError:
+        # domain 필터 미지원 버전 fallback: 전체 읽어서 대상만 빼고 재설정
+        try:
+            async with app.state.lock:
+                page = await ensure_page()
+                ctx = page.context
+                all_cookies = await ctx.cookies()
+                dom = (request.domain or "").lstrip(".")
+                keep = [c for c in all_cookies if dom not in (c.get("domain") or "")]
+                await ctx.clear_cookies()
+                if keep:
+                    await ctx.add_cookies(keep)
+                return {"success": True, "mode": f"fallback domain={request.domain}",
+                        "kept": len(keep), "timestamp": now_iso()}
+        except Exception as e:
+            import traceback; traceback.print_exc()
+            return {"success": False, "error": str(e), "timestamp": now_iso()}
     except Exception as e:
         import traceback; traceback.print_exc()
         return {"success": False, "error": str(e), "timestamp": now_iso()}
