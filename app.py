@@ -67,6 +67,10 @@ class InjectCookieRequest(BaseModel):
 class ClearCookieRequest(BaseModel):
     domain: str | None = None  
 
+class ListCookieRequest(BaseModel):
+    domain: str | None = None
+    urls: list[str] | None = None
+
 def now_iso():
     return datetime.now().isoformat()
 
@@ -413,6 +417,32 @@ async def clear_cookies(request: ClearCookieRequest):
         except Exception as e:
             import traceback; traceback.print_exc()
             return {"success": False, "error": str(e), "timestamp": now_iso()}
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        return {"success": False, "error": str(e), "timestamp": now_iso()}
+
+@app.post("/list_cookies")
+async def list_cookies(request: ListCookieRequest):
+    try:
+        async with app.state.lock:
+            page = await ensure_page()
+            ctx = page.context
+
+            if request.urls:
+                cookies = await ctx.cookies(request.urls)
+            else:
+                cookies = await ctx.cookies()
+
+            if request.domain:
+                dom = request.domain.lstrip(".")
+                cookies = [c for c in cookies if dom in (c.get("domain") or "")]
+
+            return {
+                "success": True,
+                "count": len(cookies),
+                "cookies": cookies,
+                "timestamp": now_iso(),
+            }
     except Exception as e:
         import traceback; traceback.print_exc()
         return {"success": False, "error": str(e), "timestamp": now_iso()}
