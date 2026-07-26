@@ -1,10 +1,11 @@
 services:
   camoufox-api:
     build: .
-    #network_mode: "host"
+    network_mode: "host"
     restart: always
-    ports:
-      - "8031:8031"
+    #ports:
+    #  - "8031:8031"
+    #shm_size: "2gb"
     environment:
       - CAMOUFOX_HEADLESS=virtual
       - CAMOUFOX_OS=windows
@@ -13,9 +14,15 @@ services:
       - CAMOUFOX_GEOIP=false
       - CAMOUFOX_PERSISTENT=true
       - CAMOUFOX_USER_DATA_DIR=/app/camoufox-profile
+    #  - DISPLAY=:0
+    #  - MOZ_DISABLE_GPU=1
+    #  - LIBGL_ALWAYS_SOFTWARE=1
+    #  - MOZ_WEBRENDER=0
+    #  - MOZ_ACCELERATED=0
 
     volumes:
       - camoufox-profile:/app/camoufox-profile
+    #  - /tmp/.X11-unix:/tmp/.X11-unix
 
 volumes:
   camoufox-profile:
